@@ -1,0 +1,334 @@
+HIVE PRACTICAL: FLIGHT INFORMATION SYSTEM
+
+========================================
+a) Creating, Dropping, and Altering Database Tables
+========================================
+
+Step 1: Start Hive
+
+hive
+
+CREATE DATABASE A2;
+
+USE A2;
+
+----------------------------------------
+
+
+
+----------------------------------------
+
+//Step 3: Alter Table (Add Column)
+
+ALTER TABLE flight ADD COLUMNS (airline varchar(20));
+
+----------------------------------------
+
+//Step 4: Describe Table
+
+DESC flight;
+
+----------------------------------------
+
+//Step 5: Rename Column
+
+ALTER TABLE flight CHANGE des destination varchar(20);
+
+----------------------------------------
+
+//Step 6: Rename Table
+
+ALTER TABLE flight RENAME TO flight_details;
+
+----------------------------------------
+
+//Step 7: Drop Table
+
+DROP TABLE flight;
+
+========================================
+b) Creating an External Hive Table
+========================================
+
+Step 8: Create External Table
+
+CREATE TABLE flight(
+    fno INT,
+    year INT,
+    des varchar(20),
+    delay FLOAT
+)
+ROW FORMAT DELIMITED
+FIELDS TERMINATED BY ','
+LINES TERMINATED BY '\n'
+STORED AS TEXTFILE;
+
+========================================
+c) Load Table with Data, Insert Values, and Joins
+========================================
+
+Step 9: Insert Values
+
+INSERT INTO flight VALUES (101,2005,'Mumbai',30.6);
+
+INSERT INTO flight VALUES (102,2006,'Pune',10.2);
+
+INSERT INTO flight VALUES (104,2008,'Delhi',45.5);
+
+----------------------------------------
+
+Step 10: View Data
+
+SELECT * FROM flight;
+
+----------------------------------------
+
+Step 11: Create Second Table
+
+CREATE TABLE flight1(
+    fno INT,
+    year INT,
+    src STRING
+)
+ROW FORMAT DELIMITED
+FIELDS TERMINATED BY ','
+LINES TERMINATED BY '\n'
+STORED AS TEXTFILE;
+
+----------------------------------------
+
+Step 12: Create Text File (f.txt)
+
+101,2005,nashik
+102,2006,nagpur
+103,2007,kolhapur
+
+----------------------------------------
+
+Step 13: Load Data from File
+
+LOAD DATA LOCAL INPATH '/home/cloudera/Desktop/f.txt'
+OVERWRITE INTO TABLE flight1;
+
+----------------------------------------
+
+Step 14: Verify Data
+
+SELECT * FROM flight;
+
+SELECT * FROM flight1;
+
+========================================
+JOIN OPERATIONS
+========================================
+
+1. INNER JOIN
+
+SELECT f.fno, f.year, f1.src, f.des, f.delay
+FROM flight f
+INNER JOIN flight1 f1
+ON f.fno = f1.fno;
+
+----------------------------------------
+
+2. LEFT OUTER JOIN
+
+SELECT f.fno, f.year, f1.src, f.des
+FROM flight f
+LEFT OUTER JOIN flight1 f1
+ON f.fno = f1.fno;
+
+----------------------------------------
+
+3. RIGHT OUTER JOIN
+
+SELECT f.fno, f.year, f1.src, f.des
+FROM flight f
+RIGHT OUTER JOIN flight1 f1
+ON f.fno = f1.fno;
+
+----------------------------------------
+
+4. FULL OUTER JOIN
+
+SELECT f.fno, f.year, f1.src, f.des
+FROM flight f
+FULL OUTER JOIN flight1 f1
+ON f.fno = f1.fno;
+
+----------------------------------------
+
+5. LEFT SEMI JOIN
+
+SELECT *
+FROM flight f
+LEFT SEMI JOIN flight1 f1
+ON f.fno = f1.fno;
+
+----------------------------------------
+
+6. CROSS JOIN
+
+SELECT *
+FROM flight
+CROSS JOIN flight1;
+
+========================================
+d) Create Index on Flight Information Table
+========================================
+
+Step 15: Create Index
+
+CREATE INDEX flight_index
+ON TABLE flight(fno)
+AS 'org.apache.hadoop.hive.ql.index.compact.CompactIndexHandler'
+WITH DEFERRED REBUILD;
+
+----------------------------------------
+
+Step 16: Rebuild Index
+
+ALTER INDEX flight_index
+ON flight
+REBUILD;
+
+----------------------------------------
+
+Step 17: Show Indexes
+
+SHOW INDEXES ON flight;
+
+========================================
+e) Find Average Departure Delay in 2005
+========================================
+
+Step 18: Average Delay
+
+SELECT AVG(delay) AS average_delay
+FROM flight
+WHERE year = 2005;
+
+========================================
+ADDITIONAL IMPORTANT OPERATIONS
+========================================
+
+1. Show Tables
+
+SHOW TABLES;
+
+----------------------------------------
+
+2. Show Databases
+
+SHOW DATABASES;
+
+----------------------------------------
+
+3. Sort Data
+
+SELECT *
+FROM flight
+ORDER BY delay DESC;
+
+----------------------------------------
+
+4. Find Maximum Delay
+
+SELECT MAX(delay)
+FROM flight;
+
+----------------------------------------
+
+5. Count Total Flights
+
+SELECT COUNT(*)
+FROM flight;
+
+----------------------------------------
+
+6. Group By Query
+
+SELECT year, AVG(delay)
+FROM flight
+GROUP BY year;
+
+----------------------------------------
+
+7. LIKE Operator
+
+SELECT *
+FROM flight
+WHERE des LIKE 'M%';
+
+----------------------------------------
+
+8. Truncate Table
+
+TRUNCATE TABLE flight;
+
+----------------------------------------
+
+9. Drop Database
+
+DROP DATABASE A2 CASCADE;
+
+========================================
+UPDATE OPERATIONS IN HIVE
+========================================
+
+Direct UPDATE (Works only on transactional tables)
+
+UPDATE flight
+SET delay = 50
+WHERE fno = 101;
+
+----------------------------------------
+
+Alternative Method using INSERT OVERWRITE
+
+INSERT OVERWRITE TABLE flight
+SELECT
+    fno,
+    year,
+    des,
+    CASE
+        WHEN fno = 101 THEN 50.0
+        ELSE delay
+    END
+FROM flight;
+
+----------------------------------------
+
+If airline column exists:
+
+INSERT OVERWRITE TABLE flight
+SELECT
+    fno,
+    year,
+    des,
+    CASE
+        WHEN fno = 101 THEN 50.0
+        ELSE delay
+    END,
+    airline
+FROM flight;
+
+========================================
+IMPORTANT VIVA POINTS
+========================================
+
+1. INNER JOIN → matching rows only
+
+2. LEFT JOIN → all rows from left table
+
+3. RIGHT JOIN → all rows from right table
+
+4. FULL OUTER JOIN → all rows from both tables
+
+5. CROSS JOIN → Cartesian product
+
+6. Hive UPDATE works only on transactional tables
+
+7. External table data is not deleted when table is dropped
+
+8. Managed table data is deleted when table is dropped
