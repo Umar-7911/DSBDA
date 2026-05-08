@@ -1,0 +1,110 @@
+package Driver;
+
+import java.io.IOException;
+import java.util.StringTokenizer;
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.Text;
+
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.hadoop.mapreduce.Reducer;
+
+import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
+import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+
+public class Driver {
+
+    // Mapper Class
+    public static class LoginMapper
+            extends Mapper<Object, Text, Text, IntWritable> {
+
+        private Text user = new Text();
+        private IntWritable duration = new IntWritable();
+
+        public void map(Object key, Text value, Context context)
+                throws IOException, InterruptedException {
+
+            // Convert line into tokens
+            StringTokenizer itr = new StringTokenizer(value.toString());
+
+            // Check if line contains username and duration
+            if (itr.countTokens() == 2) {
+
+                // First token = username
+                String username = itr.nextToken();
+
+                // Second token = login duration
+                int time = Integer.parseInt(itr.nextToken());
+
+                user.set(username);
+                duration.set(time);
+
+                // Send data to reducer
+                context.write(user, duration);
+            }
+        }
+    }
+
+    // Reducer Class
+    public static class LoginReducer
+            extends Reducer<Text, IntWritable, Text, IntWritable> {
+
+        private IntWritable result = new IntWritable();
+
+        public void reduce(Text key, Iterable<IntWritable> values,
+                           Context context)
+                throws IOException, InterruptedException {
+
+            int sum = 0;
+
+            // Add all login durations of same user
+            for (IntWritable val : values) {
+                sum += val.get();
+            }
+
+            result.set(sum);
+
+            // Output username and total duration
+            context.write(key, result);
+        }
+    }
+
+    // Main Method
+    public static void main(String[] args) throws Exception {
+
+        Configuration conf = new Configuration();
+
+        Job job = Job.getInstance(conf,
+                "Maximum Login Time");
+
+        job.setJarByClass(Driver.class);
+
+        // Set Mapper
+        job.setMapperClass(LoginMapper.class);
+
+        // Set Reducer
+        job.setReducerClass(LoginReducer.class);
+
+        // Optional Combiner
+        job.setCombinerClass(LoginReducer.class);
+
+        // Output Types
+        job.setOutputKeyClass(Text.class);
+        job.setOutputValueClass(IntWritable.class);
+
+        // Input Path
+        FileInputFormat.addInputPath(job,
+                new Path(args[0]));
+
+        // Output Path
+        FileOutputFormat.setOutputPath(job,
+                new Path(args[1]));
+
+        // Execute Job
+        System.exit(job.waitForCompletion(true)
+                ? 0 : 1);
+    }
+}
